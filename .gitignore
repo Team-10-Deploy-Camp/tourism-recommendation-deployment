@@ -1,0 +1,11 @@
+.python-version
+/mlartifacts
+/mlruns
+*DS_Store*
+/app_logs
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.staging

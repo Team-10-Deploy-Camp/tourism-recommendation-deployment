@@ -1,58 +1,48 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ml-ingress
+  name: ml-ingress-path
   namespace: ml-deployment
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
     traefik.ingress.kubernetes.io/router.tls: "false"
+    # Cloudflare annotations
+    external-dns.alpha.kubernetes.io/hostname: adityawidiyanto.my.id
 spec:
   ingressClassName: traefik
   rules:
-  - host: api.local
+  - host: adityawidiyanto.my.id
     http:
       paths:
-      - path: /
+      - path: /api
         pathType: Prefix
         backend:
           service:
             name: fastapi-service
             port:
               number: 8000
-  - host: mlflow.local
-    http:
-      paths:
-      - path: /
+      - path: /mlflow
         pathType: Prefix
         backend:
           service:
             name: mlflow-service
             port:
               number: 5000
-  - host: minio.local
-    http:
-      paths:
-      - path: /
+      - path: /minio
         pathType: Prefix
         backend:
           service:
             name: minio-service
             port:
               number: 9001
-  - host: grafana.local
-    http:
-      paths:
-      - path: /
+      - path: /grafana
         pathType: Prefix
         backend:
           service:
             name: grafana-service
             port:
               number: 3000
-  - host: prometheus.local
-    http:
-      paths:
-      - path: /
+      - path: /prometheus
         pathType: Prefix
         backend:
           service:

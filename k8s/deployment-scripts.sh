@@ -71,6 +71,18 @@ kubectl apply -f namespace.yaml
 # Generate Secrets
 ./generate-secrets.sh
 
+# Step 1.5: Generate Grafana and Prometheus ConfigMaps from original files
+print_header "Step 1.5: Generating Grafana and Prometheus ConfigMaps"
+
+# Make scripts executable
+chmod +x generate-grafana-configmaps.sh generate-prometheus-configmap.sh
+
+print_status "Generating Grafana ConfigMaps from /grafana directory..."
+./generate-grafana-configmaps.sh
+
+print_status "Generating Prometheus ConfigMap from /prometheus directory..."
+./generate-prometheus-configmap.sh
+
 # Step 2: Build Docker Images
 print_header "Step 2: Building Docker Images"
 
@@ -90,6 +102,13 @@ print_status "Docker images built successfully!"
 
 # Step 3: Deploy to Kubernetes
 print_header "Step 3: Deploying to Kubernetes"
+
+# Apply Grafana and Prometheus ConfigMaps first
+print_status "Applying Grafana and Prometheus ConfigMaps..."
+kubectl apply -f grafana-datasources-configmap.yaml
+kubectl apply -f grafana-dashboards-configmap.yaml
+kubectl apply -f grafana-dashboard-files-configmap.yaml
+kubectl apply -f prometheus-configmap.yaml
 
 # Create namespace and apply configurations
 print_status "Creating namespace and applying configurations..."
@@ -119,6 +138,8 @@ if kubectl get nodes | grep -q "k3s"; then
     print_status "Restarting deployments to use imported images..."
     kubectl rollout restart deployment/fastapi-app -n ml-deployment
     kubectl rollout restart deployment/mlflow-server -n ml-deployment
+    kubectl rollout restart deployment/grafana -n ml-deployment
+    kubectl rollout restart deployment/prometheus -n ml-deployment
 fi
 
 # Step 5: Wait for Deployment
@@ -164,6 +185,14 @@ echo ""
 print_status "To view logs:"
 echo "  kubectl logs -f deployment/fastapi-app -n ml-deployment"
 echo "  kubectl logs -f deployment/mlflow-server -n ml-deployment"
+echo "  kubectl logs -f deployment/grafana -n ml-deployment"
+echo "  kubectl logs -f deployment/prometheus -n ml-deployment"
+echo ""
+print_status "Dashboard yang tersedia di Grafana:"
+echo "  - ML API Monitoring (menggunakan file dari /grafana)"
+echo ""
+print_status "Prometheus configuration:"
+echo "  - Menggunakan file dari /prometheus/prometheus.yml"
 echo ""
 
 print_status "To scale the FastAPI app manually:"

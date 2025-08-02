@@ -13,8 +13,4 @@ resources:
 - fastapi-deployment.yaml
 - prometheus-deployment.yaml
 - grafana-deployment.yaml
-- ingress.yaml
-
-commonLabels:
-  app.kubernetes.io/name: ml-deployment
-  app.kubernetes.io/version: v1.0.0 
+- ingress.yaml 

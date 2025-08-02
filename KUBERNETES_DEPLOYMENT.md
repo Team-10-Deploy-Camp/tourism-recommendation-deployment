@@ -469,6 +469,9 @@ kubectl get pods -n ml-deployment | grep model-training
 
 # View training logs
 kubectl logs job/model-training-job -n ml-deployment
+
+# Update Service
+kubectl rollout restart deployment/fastapi-app -n ml-deployment
 ```
 
 ### Method 2: Manual Training (Alternative)

@@ -39,24 +39,37 @@ if ! command -v curl &> /dev/null; then
 fi
 
 # Configuration
-API_URL="http://localhost:8000"
+API_URL="https://api.adityawidiyanto.my.id"
 DURATION=300  # 5 minutes
 CONCURRENT_USERS=10
 REQUESTS_PER_SECOND=5
 
 print_status "Load test configuration:"
 echo "  API URL: $API_URL"
+echo "  Domain: adityawidiyanto.my.id"
 echo "  Duration: ${DURATION}s"
 echo "  Concurrent users: $CONCURRENT_USERS"
 echo "  Requests per second: $REQUESTS_PER_SECOND"
+echo "  Target: Auto-scaling test with real domain"
 echo ""
 
-# Check if port-forward is running
-if ! curl -s "$API_URL/" > /dev/null 2>&1; then
-    print_warning "API is not accessible. Make sure port-forward is running:"
-    echo "  kubectl port-forward -n ml-deployment svc/fastapi-service 8000:8000"
+# Check if API is accessible
+print_status "Testing API connectivity..."
+if curl -s "$API_URL/" > /dev/null 2>&1; then
+    print_status "✅ API is accessible at $API_URL"
+    API_RESPONSE=$(curl -s "$API_URL/")
+    print_status "API Status: $API_RESPONSE"
+else
+    print_warning "⚠️  API is not accessible at $API_URL"
+    print_status "Make sure:"
+    echo "  1. Domain is properly configured in Cloudflare"
+    echo "  2. Ingress is working correctly"
+    echo "  3. FastAPI pods are running"
     echo ""
-    read -p "Press Enter when port-forward is running..."
+    print_status "Checking pod status..."
+    kubectl get pods -n ml-deployment -l app=fastapi-app
+    echo ""
+    read -p "Press Enter to continue anyway..."
 fi
 
 # Sample prediction data
@@ -88,6 +101,15 @@ make_prediction() {
         -H "Content-Type: application/json" \
         -d "$PREDICTION_DATA" \
         "$API_URL/predict")
+    
+    local status_code=${response: -3}
+    echo "$status_code"
+}
+
+# Function to make a health check request
+make_health_check() {
+    local response=$(curl -s -w "%{http_code}" -o /tmp/health_response.json \
+        "$API_URL/")
     
     local status_code=${response: -3}
     echo "$status_code"
@@ -185,4 +207,14 @@ echo "  Total requests: $total_requests"
 echo "  Successful requests: $success_count"
 echo "  Failed requests: $error_count"
 echo "  Success rate: ${success_rate}%"
-echo "  Duration: ${elapsed}s" 
+echo "  Duration: ${elapsed}s"
+echo ""
+print_status "API Endpoint tested: $API_URL"
+print_status "Model Status: $(curl -s "$API_URL/" | grep -o '"model_status":"[^"]*"' | cut -d'"' -f4)"
+print_status "Model Accuracy: $(curl -s "$API_URL/" | grep -o '"model_accuracy":"[^"]*"' | cut -d'"' -f4)"
+echo ""
+print_status "To monitor HPA in real-time:"
+echo "  kubectl get hpa -n ml-deployment -w"
+echo ""
+print_status "To check pod scaling:"
+echo "  kubectl get pods -n ml-deployment -l app=fastapi-app -w" 

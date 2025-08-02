@@ -84,14 +84,50 @@ print_header "Setup Cloudflare DNS Records"
 
 # Get external IP
 print_status "Mendapatkan External IP..."
-EXTERNAL_IP=$(kubectl get nodes -o wide | grep -v "INTERNAL-IP" | head -1 | awk '{print $6}')
+print_status "Mencoba mendapatkan IP public..."
+
+# Try multiple services to get public IP
+SERVICES=(
+    "ifconfig.me"
+    "ipinfo.io/ip"
+    "icanhazip.com"
+    "checkip.amazonaws.com"
+)
+
+EXTERNAL_IP=""
+
+for service in "${SERVICES[@]}"; do
+    print_status "Mencoba $service..."
+    ip=$(curl -s --max-time 5 "$service" 2>/dev/null)
+    
+    if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        EXTERNAL_IP=$ip
+        print_status "✅ IP Public ditemukan: $EXTERNAL_IP"
+        break
+    else
+        print_warning "Gagal mendapatkan IP dari $service"
+    fi
+done
 
 if [ -z "$EXTERNAL_IP" ]; then
-    print_warning "Tidak dapat mendapatkan External IP otomatis."
-    read -p "Masukkan External IP server Anda: " EXTERNAL_IP
+    print_warning "Tidak dapat mendapatkan IP public otomatis."
+    read -p "Masukkan IP public server Anda: " EXTERNAL_IP
 fi
 
 print_status "External IP: $EXTERNAL_IP"
+
+# Check if it's a private IP
+if [[ $EXTERNAL_IP =~ ^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.) ]]; then
+    print_warning "⚠️  IP $EXTERNAL_IP adalah IP private!"
+    echo ""
+    print_status "Untuk Cloudflare Proxy (Orange Cloud), Anda perlu IP public."
+    print_status "Silakan masukkan IP public yang benar:"
+    read -p "Masukkan IP public server Anda: " EXTERNAL_IP
+    print_status "IP Public yang akan digunakan: $EXTERNAL_IP"
+else
+    print_status "✅ IP $EXTERNAL_IP adalah IP public yang valid!"
+fi
+
 echo ""
 
 print_header "Langkah-langkah setup Cloudflare:"

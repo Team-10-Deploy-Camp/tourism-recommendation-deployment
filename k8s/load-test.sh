@@ -41,16 +41,17 @@ fi
 # Configuration
 API_URL="https://api.adityawidiyanto.my.id"
 DURATION=300  # 5 minutes
-CONCURRENT_USERS=10
-REQUESTS_PER_SECOND=5
+CONCURRENT_USERS=20  # Increased concurrent users
+REQUESTS_PER_SECOND=10  # Increased requests per second
 
 print_status "Load test configuration:"
 echo "  API URL: $API_URL"
 echo "  Domain: adityawidiyanto.my.id"
+echo "  Endpoint: /predict (heavy computational load)"
 echo "  Duration: ${DURATION}s"
 echo "  Concurrent users: $CONCURRENT_USERS"
 echo "  Requests per second: $REQUESTS_PER_SECOND"
-echo "  Target: Auto-scaling test with real domain"
+echo "  Target: Auto-scaling test with ML prediction workload"
 echo ""
 
 # Check if API is accessible
@@ -59,6 +60,15 @@ if curl -s "$API_URL/" > /dev/null 2>&1; then
     print_status "✅ API is accessible at $API_URL"
     API_RESPONSE=$(curl -s "$API_URL/")
     print_status "API Status: $API_RESPONSE"
+
+# Test prediction endpoint
+print_status "Testing prediction endpoint..."
+if curl -s -X POST -H "Content-Type: application/json" -d "$PREDICTION_DATA" "$API_URL/predict" > /dev/null 2>&1; then
+    print_status "✅ Prediction endpoint is working"
+else
+    print_warning "⚠️  Prediction endpoint is not working"
+    print_status "This might affect the load test results"
+fi
 else
     print_warning "⚠️  API is not accessible at $API_URL"
     print_status "Make sure:"
@@ -157,6 +167,9 @@ request_count=0
 success_count=0
 error_count=0
 
+print_status "Starting intensive load test with /predict endpoint..."
+print_status "This will generate heavy computational load to trigger auto-scaling"
+
 while true; do
     current_time=$(date +%s)
     elapsed=$((current_time - start_time))
@@ -165,7 +178,7 @@ while true; do
         break
     fi
     
-    # Make concurrent requests
+    # Make concurrent prediction requests (heavier load)
     for i in $(seq 1 $CONCURRENT_USERS); do
         (
             status=$(make_prediction)
@@ -191,10 +204,10 @@ while true; do
     
     # Progress update
     if [ $((elapsed % 30)) -eq 0 ]; then
-        print_status "Progress: ${elapsed}s/${DURATION}s - Requests: $request_count, Success: $success_count, Errors: $error_count"
+        print_status "Progress: ${elapsed}s/${DURATION}s - Prediction Requests: $request_count, Success: $success_count, Errors: $error_count"
     fi
     
-    # Rate limiting
+    # Rate limiting - reduced to generate more load
     sleep $((1 / REQUESTS_PER_SECOND))
 done
 
@@ -209,9 +222,10 @@ echo "  Failed requests: $error_count"
 echo "  Success rate: ${success_rate}%"
 echo "  Duration: ${elapsed}s"
 echo ""
-print_status "API Endpoint tested: $API_URL"
+print_status "API Endpoint tested: $API_URL/predict"
 print_status "Model Status: $(curl -s "$API_URL/" | grep -o '"model_status":"[^"]*"' | cut -d'"' -f4)"
 print_status "Model Accuracy: $(curl -s "$API_URL/" | grep -o '"model_accuracy":"[^"]*"' | cut -d'"' -f4)"
+print_status "Load Type: ML Prediction (computationally intensive)"
 echo ""
 print_status "To monitor HPA in real-time:"
 echo "  kubectl get hpa -n ml-deployment -w"

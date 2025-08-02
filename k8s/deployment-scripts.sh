@@ -156,8 +156,31 @@ kubectl wait --for=condition=ready pod -l app=grafana -n ml-deployment --timeout
 
 print_status "All pods are ready!"
 
-# Step 6: Show Results
-print_header "Step 6: Deployment Complete"
+# Step 6: Setup PostgreSQL NodePort
+print_header "Step 6: Setting up PostgreSQL NodePort"
+
+print_status "Setting up PostgreSQL NodePort for external access..."
+print_status "This will allow you to connect to PostgreSQL from anywhere without port-forwarding"
+
+# Get server public IP
+PUBLIC_IP=$(curl -s ifconfig.me)
+print_status "Server Public IP: $PUBLIC_IP"
+
+# Get NodePort
+NODEPORT=$(kubectl get svc postgres-nodeport -n ml-deployment -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null)
+if [ -n "$NODEPORT" ]; then
+    print_status "✅ PostgreSQL NodePort: $NODEPORT"
+    print_status "✅ PostgreSQL NodePort is ready!"
+else
+    print_warning "⚠️  NodePort not available yet"
+    print_status "You can check manually with:"
+    echo "  kubectl get svc postgres-nodeport -n ml-deployment"
+    print_status "Or use port-forwarding as fallback:"
+    echo "  kubectl port-forward -n ml-deployment svc/postgres-service 5432:5432"
+fi
+
+# Step 7: Show Results
+print_header "Step 7: Deployment Complete"
 
 # Show service status
 print_status "Deployment completed successfully!"
@@ -176,6 +199,20 @@ echo "  kubectl port-forward -n ml-deployment svc/mlflow-service 5000:5000"
 echo "  kubectl port-forward -n ml-deployment svc/prometheus-service 9090:9090"
 echo "  kubectl port-forward -n ml-deployment svc/grafana-service 3000:3000"
 echo "  kubectl port-forward -n ml-deployment svc/minio-service 9001:9001"
+echo ""
+
+print_status "PostgreSQL NodePort (External Access):"
+if [ -n "$NODEPORT" ] && [ -n "$PUBLIC_IP" ]; then
+    echo "  Host: $PUBLIC_IP"
+    echo "  Port: $NODEPORT"
+    echo "  Database: mlflow"
+    echo "  Username: mlflowuser"
+    echo "  Password: mlflowpassword"
+    echo "  Connection String: jdbc:postgresql://$PUBLIC_IP:$NODEPORT/mlflow"
+else
+    echo "  Check NodePort status: kubectl get svc postgres-nodeport -n ml-deployment"
+    echo "  Or use port-forward: kubectl port-forward -n ml-deployment svc/postgres-service 5432:5432"
+fi
 echo ""
 
 print_status "To check HPA status:"
@@ -197,6 +234,21 @@ echo ""
 
 print_status "To scale the FastAPI app manually:"
 echo "  kubectl scale deployment fastapi-app --replicas=5 -n ml-deployment"
+echo ""
+
+print_status "PostgreSQL NodePort Security:"
+echo "  ⚠️  PostgreSQL is now exposed to the internet!"
+echo "  🔒 Recommended security measures:"
+echo "     - Use VPN for access"
+echo "     - Setup firewall rules"
+echo "     - Enable SSL/TLS"
+echo "     - Restrict IP access"
+echo "     - Change default passwords"
+echo ""
+
+print_status "To monitor PostgreSQL NodePort:"
+echo "  kubectl get svc postgres-nodeport -n ml-deployment"
+echo "  kubectl describe svc postgres-nodeport -n ml-deployment"
 echo ""
 
 print_status "To delete the deployment:"

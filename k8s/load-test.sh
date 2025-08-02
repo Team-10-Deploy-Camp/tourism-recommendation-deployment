@@ -41,8 +41,8 @@ fi
 # Configuration
 API_URL="https://api.adityawidiyanto.my.id"
 DURATION=300  # 5 minutes
-CONCURRENT_USERS=20  # Increased concurrent users
-REQUESTS_PER_SECOND=10  # Increased requests per second
+CONCURRENT_USERS=50  # Much higher concurrent users
+REQUESTS_PER_SECOND=20  # Much higher requests per second
 
 print_status "Load test configuration:"
 echo "  API URL: $API_URL"
@@ -51,38 +51,11 @@ echo "  Endpoint: /predict (heavy computational load)"
 echo "  Duration: ${DURATION}s"
 echo "  Concurrent users: $CONCURRENT_USERS"
 echo "  Requests per second: $REQUESTS_PER_SECOND"
-echo "  Target: Auto-scaling test with ML prediction workload"
+echo "  Expected total requests: $((CONCURRENT_USERS * REQUESTS_PER_SECOND * DURATION))"
+echo "  Target: Auto-scaling test with intensive ML prediction workload"
 echo ""
 
-# Check if API is accessible
-print_status "Testing API connectivity..."
-if curl -s "$API_URL/" > /dev/null 2>&1; then
-    print_status "✅ API is accessible at $API_URL"
-    API_RESPONSE=$(curl -s "$API_URL/")
-    print_status "API Status: $API_RESPONSE"
-
-# Test prediction endpoint
-print_status "Testing prediction endpoint..."
-if curl -s -X POST -H "Content-Type: application/json" -d "$PREDICTION_DATA" "$API_URL/predict" > /dev/null 2>&1; then
-    print_status "✅ Prediction endpoint is working"
-else
-    print_warning "⚠️  Prediction endpoint is not working"
-    print_status "This might affect the load test results"
-fi
-else
-    print_warning "⚠️  API is not accessible at $API_URL"
-    print_status "Make sure:"
-    echo "  1. Domain is properly configured in Cloudflare"
-    echo "  2. Ingress is working correctly"
-    echo "  3. FastAPI pods are running"
-    echo ""
-    print_status "Checking pod status..."
-    kubectl get pods -n ml-deployment -l app=fastapi-app
-    echo ""
-    read -p "Press Enter to continue anyway..."
-fi
-
-# Sample prediction data
+# Sample prediction data - larger dataset for heavier load
 PREDICTION_DATA='[
   {
     "sepal_length": 5.1,
@@ -101,8 +74,66 @@ PREDICTION_DATA='[
     "sepal_width": 3.0,
     "petal_length": 5.2,
     "petal_width": 2.3
+  },
+  {
+    "sepal_length": 5.8,
+    "sepal_width": 2.7,
+    "petal_length": 4.1,
+    "petal_width": 1.0
+  },
+  {
+    "sepal_length": 7.1,
+    "sepal_width": 3.0,
+    "petal_length": 5.9,
+    "petal_width": 2.1
+  },
+  {
+    "sepal_length": 4.9,
+    "sepal_width": 3.1,
+    "petal_length": 1.5,
+    "petal_width": 0.1
+  },
+  {
+    "sepal_length": 6.5,
+    "sepal_width": 3.0,
+    "petal_length": 5.8,
+    "petal_width": 2.2
+  },
+  {
+    "sepal_length": 5.5,
+    "sepal_width": 2.4,
+    "petal_length": 3.8,
+    "petal_width": 1.1
   }
 ]'
+
+# Check if API is accessible
+print_status "Testing API connectivity..."
+if curl -s "$API_URL/" > /dev/null 2>&1; then
+    print_status "✅ API is accessible at $API_URL"
+    API_RESPONSE=$(curl -s "$API_URL/")
+    print_status "API Status: $API_RESPONSE"
+
+    # Test prediction endpoint
+    print_status "Testing prediction endpoint..."
+    if curl -s -X POST -H "Content-Type: application/json" -d "$PREDICTION_DATA" "$API_URL/predict" > /dev/null 2>&1; then
+        print_status "✅ Prediction endpoint is working"
+    else
+        print_warning "⚠️  Prediction endpoint is not working"
+        print_status "This might affect the load test results"
+    fi
+else
+    print_warning "⚠️  API is not accessible at $API_URL"
+    print_status "Make sure:"
+    echo "  1. Domain is properly configured in Cloudflare"
+    echo "  2. Ingress is working correctly"
+    echo "  3. FastAPI pods are running"
+    echo ""
+    print_status "Checking pod status..."
+    kubectl get pods -n ml-deployment -l app=fastapi-app
+    echo ""
+    read -p "Press Enter to continue anyway..."
+fi
 
 # Function to make a prediction request
 make_prediction() {
@@ -202,13 +233,15 @@ while true; do
     
     request_count=$((request_count + CONCURRENT_USERS))
     
-    # Progress update
-    if [ $((elapsed % 30)) -eq 0 ]; then
+    # Progress update - more frequent updates
+    if [ $((elapsed % 10)) -eq 0 ]; then
         print_status "Progress: ${elapsed}s/${DURATION}s - Prediction Requests: $request_count, Success: $success_count, Errors: $error_count"
+        print_status "Current RPS: ~$((request_count / (elapsed + 1))) requests/second"
     fi
     
-    # Rate limiting - reduced to generate more load
-    sleep $((1 / REQUESTS_PER_SECOND))
+    # Rate limiting - calculate sleep time correctly
+    sleep_time=$(echo "scale=3; 1 / $REQUESTS_PER_SECOND" | bc -l 2>/dev/null || echo "0.05")
+    sleep $sleep_time
 done
 
 # Final statistics

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: prometheus
-        image: prom/prometheus:v2.45.0
+        image: prom/prometheus:latest
         ports:
         - containerPort: 9090
         volumeMounts:
@@ -24,12 +24,14 @@ spec:
         - name: prometheus-storage
           mountPath: /prometheus
         command:
+        - /bin/prometheus
         - --config.file=/etc/prometheus/prometheus.yml
         - --storage.tsdb.path=/prometheus
         - --web.console.libraries=/etc/prometheus/console_libraries
         - --web.console.templates=/etc/prometheus/consoles
         - --storage.tsdb.retention.time=200h
         - --web.enable-lifecycle
+        - --web.enable-admin-api
         resources:
           requests:
             memory: "256Mi"
@@ -68,10 +70,6 @@ data:
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
-
-    rule_files:
-      # - "first_rules.yml"
-      # - "second_rules.yml"
 
     scrape_configs:
       - job_name: 'prometheus'

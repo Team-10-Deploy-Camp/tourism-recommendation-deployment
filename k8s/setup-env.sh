@@ -67,11 +67,34 @@ else
     print_status ".env file already exists."
 fi
 
-# Step 2: Generate ConfigMap and Secrets
-print_header "Step 2: Generating Kubernetes ConfigMap and Secrets"
+# Step 2: Create Namespace
+print_header "Step 2: Creating Kubernetes Namespace"
 
-# Navigate to k8s directory
+# Check if kubectl is available
+if ! command -v kubectl &> /dev/null; then
+    print_error "kubectl is not installed or not in PATH"
+    print_status "Please install kubectl first:"
+    echo "  curl -LO \"https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\""
+    echo "  sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
+    exit 1
+fi
+
+# Navigate to k8s directory first
+print_status "Navigating to k8s directory..."
 cd k8s
+
+# Create namespace first
+print_status "Creating ml-deployment namespace..."
+kubectl apply -f namespace.yaml
+
+if [ $? -eq 0 ]; then
+    print_status "Namespace created successfully!"
+else
+    print_warning "Namespace might already exist or there was an issue creating it."
+fi
+
+# Step 3: Generate ConfigMap and Secrets
+print_header "Step 3: Generating Kubernetes ConfigMap and Secrets"
 
 # Make scripts executable
 chmod +x generate-configmap.sh generate-secrets.sh
@@ -84,8 +107,8 @@ print_status "Generating ConfigMap..."
 print_status "Generating Secrets..."
 ./generate-secrets.sh
 
-# Step 3: Verify generated files
-print_header "Step 3: Verifying generated files"
+# Step 4: Verify generated files
+print_header "Step 4: Verifying generated files"
 
 if [ -f "configmap.yaml" ] && [ -f "secret.yaml" ]; then
     print_status "✅ ConfigMap and Secret files generated successfully!"

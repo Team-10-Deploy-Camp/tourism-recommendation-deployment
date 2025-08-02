@@ -1,16 +1,17 @@
 #!/bin/bash
 
-# ML Deployment Kubernetes Deployment Script
-# This script automates the deployment of the ML application to Kubernetes
+# Comprehensive ML Deployment Kubernetes Script
+# This script handles everything: setup, deployment, and image fixes
 
 set -e
 
-echo "🚀 Starting ML Deployment to Kubernetes..."
+echo "🚀 Starting Comprehensive ML Deployment to Kubernetes..."
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Function to print colored output
@@ -26,6 +27,10 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+print_header() {
+    echo -e "${BLUE}[STEP]${NC} $1"
+}
+
 # Check if kubectl is installed
 if ! command -v kubectl &> /dev/null; then
     print_error "kubectl is not installed. Please install kubectl first."
@@ -39,7 +44,10 @@ if ! command -v kustomize &> /dev/null; then
     sudo mv kustomize /usr/local/bin/
 fi
 
-# Check if .env file exists and generate ConfigMap/Secrets
+# Step 1: Environment Setup
+print_header "Step 1: Environment Setup"
+
+# Check if .env file exists
 if [ ! -f "../.env" ]; then
     print_error ".env file not found!"
     print_status "Please run the setup script first:"
@@ -53,14 +61,18 @@ print_status "Generating ConfigMap and Secrets from .env file..."
 # Make scripts executable
 chmod +x generate-configmap.sh generate-secrets.sh
 
+# Create namespace first
+print_status "Creating ml-deployment namespace..."
+kubectl apply -f namespace.yaml
+
 # Generate ConfigMap
 ./generate-configmap.sh
 
 # Generate Secrets
 ./generate-secrets.sh
 
-# Build Docker images
-print_status "Building Docker images..."
+# Step 2: Build Docker Images
+print_header "Step 2: Building Docker Images"
 
 # Build FastAPI app image
 print_status "Building FastAPI app image..."
@@ -76,11 +88,41 @@ docker build -t model-trainer:latest ../model
 
 print_status "Docker images built successfully!"
 
+# Step 3: Deploy to Kubernetes
+print_header "Step 3: Deploying to Kubernetes"
+
 # Create namespace and apply configurations
 print_status "Creating namespace and applying configurations..."
-
-# Apply all configurations using kustomize
 kubectl apply -k .
+
+# Step 4: Fix Image Issues (for k3s)
+print_header "Step 4: Fixing Image Issues"
+
+# Check if we're using k3s
+if kubectl get nodes | grep -q "k3s"; then
+    print_status "Detected k3s cluster. Fixing image access issues..."
+    
+    # Import images into k3s
+    print_status "Importing Docker images into k3s..."
+    docker save fastapi-app:latest > fastapi-app.tar
+    docker save mlflow-server:latest > mlflow-server.tar
+    docker save model-trainer:latest > model-trainer.tar
+    
+    sudo k3s ctr images import fastapi-app.tar
+    sudo k3s ctr images import mlflow-server.tar
+    sudo k3s ctr images import model-trainer.tar
+    
+    # Clean up tar files
+    rm -f fastapi-app.tar mlflow-server.tar model-trainer.tar
+    
+    # Restart deployments to pick up images
+    print_status "Restarting deployments to use imported images..."
+    kubectl rollout restart deployment/fastapi-app -n ml-deployment
+    kubectl rollout restart deployment/mlflow-server -n ml-deployment
+fi
+
+# Step 5: Wait for Deployment
+print_header "Step 5: Waiting for Deployment"
 
 # Wait for pods to be ready
 print_status "Waiting for pods to be ready..."
@@ -92,6 +134,9 @@ kubectl wait --for=condition=ready pod -l app=prometheus -n ml-deployment --time
 kubectl wait --for=condition=ready pod -l app=grafana -n ml-deployment --timeout=300s
 
 print_status "All pods are ready!"
+
+# Step 6: Show Results
+print_header "Step 6: Deployment Complete"
 
 # Show service status
 print_status "Deployment completed successfully!"
@@ -126,4 +171,4 @@ echo "  kubectl scale deployment fastapi-app --replicas=5 -n ml-deployment"
 echo ""
 
 print_status "To delete the deployment:"
-echo "  kubectl delete -k ." 
+echo "  ./cleanup.sh" 

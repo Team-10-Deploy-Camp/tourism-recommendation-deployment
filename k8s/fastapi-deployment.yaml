@@ -16,7 +16,7 @@ spec:
       containers:
       - name: fastapi-app
         image: fastapi-app:latest
-        imagePullPolicy: Never  # Use local image
+        imagePullPolicy: Never  # Use local image for k3s
         ports:
         - containerPort: 8000
         env:

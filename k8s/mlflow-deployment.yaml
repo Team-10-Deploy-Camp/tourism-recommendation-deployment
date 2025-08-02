@@ -16,7 +16,7 @@ spec:
       containers:
       - name: mlflow-server
         image: mlflow-server:latest
-        imagePullPolicy: Never  # Use local image
+        imagePullPolicy: Never  # Use local image for k3s
         ports:
         - containerPort: 5000
         command:

@@ -413,13 +413,156 @@ curl http://$SERVER_IP/minio/
 
 ## Step 17: Train Your Model
 
-```bash
-# Create a job to train the model
-kubectl create job model-training --from=cronjob/model-trainer -n ml-deployment
+### Method 1: Using Kubernetes Job (Recommended)
 
-# Or run training manually
-kubectl run model-trainer --image=model-trainer:latest -n ml-deployment --rm -i --tty --restart=Never --env="MLFLOW_TRACKING_URI=http://mlflow-service:5000" --env="AWS_ACCESS_KEY_ID=minio_prod" --env="AWS_SECRET_ACCESS_KEY=your_strong_minio_password" --env="MLFLOW_S3_ENDPOINT_URL=http://minio-service:9000"
+First, create a Job YAML file for model training:
+
+```bash
+# Create model training job file
+cat > k8s/model-training-job.yaml << 'EOF'
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: model-training-job
+  namespace: ml-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: model-trainer
+        image: model-trainer:latest
+        imagePullPolicy: Never
+        env:
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: ml-secrets
+              key: MINIO_ROOT_USER
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ml-secrets
+              key: MINIO_ROOT_PASSWORD
+        - name: MLFLOW_S3_ENDPOINT_URL
+          value: "http://minio-service:9000"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      restartPolicy: Never
+  backoffLimit: 3
+EOF
+
+# Apply the job
+kubectl apply -f k8s/model-training-job.yaml
+
+# Check job status
+kubectl get jobs -n ml-deployment
+
+# Monitor job progress
+kubectl get pods -n ml-deployment | grep model-training
+
+# View training logs
+kubectl logs job/model-training-job -n ml-deployment
 ```
+
+### Method 2: Manual Training (Alternative)
+
+```bash
+# Run training manually with correct credentials
+kubectl run model-trainer --image=model-trainer:latest -n ml-deployment --rm -i --tty --restart=Never \
+  --env="MLFLOW_TRACKING_URI=http://mlflow-service:5000" \
+  --env="AWS_ACCESS_KEY_ID=minioadminteam10" \
+  --env="AWS_SECRET_ACCESS_KEY=minioadminteam10" \
+  --env="MLFLOW_S3_ENDPOINT_URL=http://minio-service:9000"
+```
+
+### Verify Training Success
+
+```bash
+# Check if job completed successfully
+kubectl get jobs -n ml-deployment
+
+# View detailed logs
+kubectl logs job/model-training-job -n ml-deployment --tail=50
+
+# Check if model was registered in MLflow
+# Access MLflow UI at http://<server-ip>/mlflow/
+# Look for the "iris-classifier" model in the Model Registry
+```
+
+### Access MLflow to View Training Results
+
+```bash
+# Port forward MLflow service for local access
+kubectl port-forward service/mlflow-service 5000:5000 -n ml-deployment
+
+# Or access via ingress
+curl http://<server-ip>/mlflow/
+```
+
+**MLflow Features to Explore:**
+
+- **Experiments**: View training runs and metrics
+- **Model Registry**: See registered models and versions
+- **Artifacts**: Download model files and artifacts
+- **Metrics**: Compare model performance across runs
+
+### Clean Up Training Job
+
+```bash
+# Delete the training job after completion
+kubectl delete job model-training-job -n ml-deployment
+
+# Or delete all completed jobs
+kubectl delete jobs --field-selector status.successful=1 -n ml-deployment
+```
+
+### Troubleshooting Model Training
+
+**Common Issues:**
+
+1. **Job fails to start:**
+
+   ```bash
+   # Check if image exists
+   docker images | grep model-trainer
+
+   # Check pod events
+   kubectl describe pod -l job-name=model-training-job -n ml-deployment
+   ```
+
+2. **Training fails with connection errors:**
+
+   ```bash
+   # Check if MLflow service is running
+   kubectl get pods -n ml-deployment | grep mlflow
+
+   # Check MLflow logs
+   kubectl logs deployment/mlflow-server -n ml-deployment
+   ```
+
+3. **MinIO connection issues:**
+
+   ```bash
+   # Check MinIO service
+   kubectl get pods -n ml-deployment | grep minio
+
+   # Verify MinIO credentials
+   kubectl get secret ml-secrets -n ml-deployment -o jsonpath='{.data.MINIO_ROOT_USER}' | base64 -d
+   ```
+
+4. **Model not appearing in MLflow:**
+   ```bash
+   # Check if bucket exists in MinIO
+   # Access MinIO console at http://<server-ip>/minio/
+   # Create 'mlflow' bucket if it doesn't exist
+   ```
 
 ## Step 18: Test Auto-scaling
 

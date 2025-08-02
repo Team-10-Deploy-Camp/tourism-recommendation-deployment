@@ -120,31 +120,6 @@ EOF
 print_status "Kubernetes secret YAML created successfully!"
 print_status "Secret file: secret.yaml"
 
-# Optionally apply the secret immediately
-echo ""
-read -p "Do you want to apply this secret to Kubernetes now? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    print_status "Applying secret to Kubernetes..."
-    
-    # Check if kubectl is available
-    if ! command -v kubectl &> /dev/null; then
-        print_error "kubectl is not installed or not in PATH"
-        exit 1
-    fi
-    
-    # Apply the secret
-    kubectl apply -f secret.yaml
-    
-    if [ $? -eq 0 ]; then
-        print_status "Secret applied successfully!"
-        print_status "You can verify with: kubectl get secret ml-secrets -n ml-deployment"
-    else
-        print_error "Failed to apply secret!"
-        exit 1
-    fi
-else
-    print_status "Secret YAML created. You can apply it later with: kubectl apply -f secret.yaml"
-fi
+print_status "Secret YAML created successfully!"
 
 print_status "Secret generation completed!" 

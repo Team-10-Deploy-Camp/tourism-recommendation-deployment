@@ -10,6 +10,7 @@ resources:
 - postgres-deployment.yaml
 - postgres-nodeport.yaml
 - minio-deployment.yaml
+- minio-nodeport.yaml
 - mlflow-deployment.yaml
 - fastapi-deployment.yaml
 - prometheus-deployment.yaml

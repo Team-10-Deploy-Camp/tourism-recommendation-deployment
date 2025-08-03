@@ -156,27 +156,43 @@ kubectl wait --for=condition=ready pod -l app=grafana -n ml-deployment --timeout
 
 print_status "All pods are ready!"
 
-# Step 6: Setup PostgreSQL NodePort
-print_header "Step 6: Setting up PostgreSQL NodePort"
+# Step 6: Setup PostgreSQL and MinIO NodePort
+print_header "Step 6: Setting up PostgreSQL and MinIO NodePort"
 
-print_status "Setting up PostgreSQL NodePort for external access..."
-print_status "This will allow you to connect to PostgreSQL from anywhere without port-forwarding"
+print_status "Setting up PostgreSQL and MinIO NodePort for external access..."
+print_status "This will allow you to connect to PostgreSQL and MinIO from anywhere without port-forwarding"
 
 # Get server public IP
 PUBLIC_IP=$(curl -s ifconfig.me)
 print_status "Server Public IP: $PUBLIC_IP"
 
-# Get NodePort
-NODEPORT=$(kubectl get svc postgres-nodeport -n ml-deployment -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null)
-if [ -n "$NODEPORT" ]; then
-    print_status "✅ PostgreSQL NodePort: $NODEPORT"
+# Get PostgreSQL NodePort
+POSTGRES_NODEPORT=$(kubectl get svc postgres-nodeport -n ml-deployment -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null)
+if [ -n "$POSTGRES_NODEPORT" ]; then
+    print_status "✅ PostgreSQL NodePort: $POSTGRES_NODEPORT"
     print_status "✅ PostgreSQL NodePort is ready!"
 else
-    print_warning "⚠️  NodePort not available yet"
+    print_warning "⚠️  PostgreSQL NodePort not available yet"
     print_status "You can check manually with:"
     echo "  kubectl get svc postgres-nodeport -n ml-deployment"
     print_status "Or use port-forwarding as fallback:"
     echo "  kubectl port-forward -n ml-deployment svc/postgres-service 5432:5432"
+fi
+
+# Get MinIO NodePort
+MINIO_API_NODEPORT=$(kubectl get svc minio-nodeport -n ml-deployment -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null)
+MINIO_CONSOLE_NODEPORT=$(kubectl get svc minio-nodeport -n ml-deployment -o jsonpath='{.spec.ports[1].nodePort}' 2>/dev/null)
+
+if [ -n "$MINIO_API_NODEPORT" ] && [ -n "$MINIO_CONSOLE_NODEPORT" ]; then
+    print_status "✅ MinIO API NodePort: $MINIO_API_NODEPORT"
+    print_status "✅ MinIO Console NodePort: $MINIO_CONSOLE_NODEPORT"
+    print_status "✅ MinIO NodePort is ready!"
+else
+    print_warning "⚠️  MinIO NodePort not available yet"
+    print_status "You can check manually with:"
+    echo "  kubectl get svc minio-nodeport -n ml-deployment"
+    print_status "Or use port-forwarding as fallback:"
+    echo "  kubectl port-forward -n ml-deployment svc/minio-service 9001:9001"
 fi
 
 # Step 7: Show Results
@@ -192,6 +208,10 @@ echo "  Prometheus: http://localhost:9090 (via port-forward)"
 echo "  Grafana: http://localhost:3000 (via port-forward)"
 echo "  MinIO Console: http://localhost:9001 (via port-forward)"
 echo ""
+echo "  📊 MinIO Console (NodePort): http://$PUBLIC_IP:$MINIO_CONSOLE_NODEPORT"
+echo "  🔌 MinIO API (NodePort): http://$PUBLIC_IP:$MINIO_API_NODEPORT"
+echo "  🗄️  PostgreSQL (NodePort): $PUBLIC_IP:$POSTGRES_NODEPORT"
+echo ""
 
 print_status "To access services, run the following commands:"
 echo "  kubectl port-forward -n ml-deployment svc/fastapi-service 8000:8000"
@@ -202,16 +222,33 @@ echo "  kubectl port-forward -n ml-deployment svc/minio-service 9001:9001"
 echo ""
 
 print_status "PostgreSQL NodePort (External Access):"
-if [ -n "$NODEPORT" ] && [ -n "$PUBLIC_IP" ]; then
+if [ -n "$POSTGRES_NODEPORT" ] && [ -n "$PUBLIC_IP" ]; then
     echo "  Host: $PUBLIC_IP"
-    echo "  Port: $NODEPORT"
+    echo "  Port: $POSTGRES_NODEPORT"
     echo "  Database: mlflow"
     echo "  Username: mlflowuser"
     echo "  Password: mlflowpassword"
-    echo "  Connection String: jdbc:postgresql://$PUBLIC_IP:$NODEPORT/mlflow"
+    echo "  Connection String: jdbc:postgresql://$PUBLIC_IP:$POSTGRES_NODEPORT/mlflow"
 else
     echo "  Check NodePort status: kubectl get svc postgres-nodeport -n ml-deployment"
     echo "  Or use port-forward: kubectl port-forward -n ml-deployment svc/postgres-service 5432:5432"
+fi
+echo ""
+
+print_status "MinIO NodePort (External Access):"
+if [ -n "$MINIO_API_NODEPORT" ] && [ -n "$MINIO_CONSOLE_NODEPORT" ] && [ -n "$PUBLIC_IP" ]; then
+    echo "  📊 MinIO Console (Web UI): http://$PUBLIC_IP:$MINIO_CONSOLE_NODEPORT"
+    echo "  🔌 MinIO API Endpoint: http://$PUBLIC_IP:$MINIO_API_NODEPORT"
+    echo "  Username: minioadmin (or from secret)"
+    echo "  Password: minioadmin (or from secret)"
+    echo ""
+    echo "  For MLflow configuration:"
+    echo "    AWS_ENDPOINT_URL=http://$PUBLIC_IP:$MINIO_API_NODEPORT"
+    echo "    AWS_ACCESS_KEY_ID=minioadmin"
+    echo "    AWS_SECRET_ACCESS_KEY=minioadmin"
+else
+    echo "  Check NodePort status: kubectl get svc minio-nodeport -n ml-deployment"
+    echo "  Or use port-forward: kubectl port-forward -n ml-deployment svc/minio-service 9001:9001"
 fi
 echo ""
 
@@ -236,19 +273,22 @@ print_status "To scale the FastAPI app manually:"
 echo "  kubectl scale deployment fastapi-app --replicas=5 -n ml-deployment"
 echo ""
 
-print_status "PostgreSQL NodePort Security:"
-echo "  ⚠️  PostgreSQL is now exposed to the internet!"
+print_status "NodePort Security (PostgreSQL & MinIO):"
+echo "  ⚠️  PostgreSQL and MinIO are now exposed to the internet!"
 echo "  🔒 Recommended security measures:"
 echo "     - Use VPN for access"
 echo "     - Setup firewall rules"
 echo "     - Enable SSL/TLS"
 echo "     - Restrict IP access"
 echo "     - Change default passwords"
+echo "     - Use strong authentication"
 echo ""
 
-print_status "To monitor PostgreSQL NodePort:"
+print_status "To monitor NodePort services:"
 echo "  kubectl get svc postgres-nodeport -n ml-deployment"
+echo "  kubectl get svc minio-nodeport -n ml-deployment"
 echo "  kubectl describe svc postgres-nodeport -n ml-deployment"
+echo "  kubectl describe svc minio-nodeport -n ml-deployment"
 echo ""
 
 print_status "To delete the deployment:"

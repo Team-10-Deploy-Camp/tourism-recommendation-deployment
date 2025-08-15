@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ml-deployment
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- secret.yaml
+- postgres-deployment.yaml
+- postgres-nodeport.yaml
+- minio-deployment.yaml
+- minio-nodeport.yaml
+- mlflow-deployment.yaml
+- fastapi-deployment.yaml
+- prometheus-deployment.yaml
+- grafana-deployment.yaml
+- ingress-multi-domain.yaml 

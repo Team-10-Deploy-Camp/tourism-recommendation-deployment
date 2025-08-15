@@ -4,8 +4,8 @@ metadata:
   name: ml-ingress-multi-domain
   namespace: ml-deployment
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web
-    traefik.ingress.kubernetes.io/router.tls: "false"
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
     # Cloudflare annotations for both domains
     external-dns.alpha.kubernetes.io/hostname: api.adityawidiyanto.my.id, mlflow.adityawidiyanto.my.id, prometheus.adityawidiyanto.my.id, grafana.adityawidiyanto.my.id, minio.adityawidiyanto.my.id, api.team10deploycamp.online, mlflow.team10deploycamp.online, prometheus.team10deploycamp.online, grafana.team10deploycamp.online, minio.team10deploycamp.online
 spec:

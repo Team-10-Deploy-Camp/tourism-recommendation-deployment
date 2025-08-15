@@ -16,7 +16,7 @@ spec:
       containers:
       - name: mlflow-server
         image: mlflow-server:latest
-        imagePullPolicy: Never  # Use local image for k3s
+        imagePullPolicy: Never
         ports:
         - containerPort: 5000
         command:
@@ -32,18 +32,25 @@ spec:
         - "5000"
         - --serve-artifacts
         env:
+        # MLflow Tracking URI
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+        
+        # MinIO/S3 Configuration
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
               name: ml-secrets
-              key: MINIO_ROOT_USER
+              key: AWS_ACCESS_KEY_ID
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
               name: ml-secrets
-              key: MINIO_ROOT_PASSWORD
+              key: AWS_SECRET_ACCESS_KEY
         - name: MLFLOW_S3_ENDPOINT_URL
           value: "http://minio-service:9000"
+        
+        # PostgreSQL Configuration
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
@@ -59,6 +66,34 @@ spec:
             configMapKeyRef:
               name: ml-config
               key: POSTGRES_DB
+        
+        # ClickHouse Configuration
+        - name: clickhouse_host
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_host
+        - name: clickhouse_port
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_port
+        - name: clickhouse_user
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_user
+        - name: clickhouse_database
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_database
+        - name: clickhouse_table
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_table
+        
         resources:
           requests:
             memory: "512Mi"

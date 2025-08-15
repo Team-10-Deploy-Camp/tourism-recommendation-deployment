@@ -61,6 +61,11 @@ CONFIGMAP_VARS=(
     "GRAFANA_PORT"
     "MODEL_NAME"
     "MODEL_STAGE"
+    "clickhouse_host"
+    "clickhouse_port"
+    "clickhouse_user"
+    "clickhouse_database"
+    "clickhouse_table"
 )
 
 print_status "Reading configuration values from .env file..."
@@ -110,7 +115,7 @@ for var in "${CONFIGMAP_VARS[@]}"; do
                 echo "  ${var}: \"3000\"" >> configmap.yaml
                 ;;
             "MODEL_NAME")
-                echo "  ${var}: \"iris-classifier\"" >> configmap.yaml
+                echo "  ${var}: \"tourism-advanced-hybrid-gb\"" >> configmap.yaml
                 ;;
             "MODEL_STAGE")
                 echo "  ${var}: \"production\"" >> configmap.yaml

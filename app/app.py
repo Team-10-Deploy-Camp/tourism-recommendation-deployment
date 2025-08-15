@@ -68,7 +68,7 @@ os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_ACCESS_KEY")
 os.environ["MLFLOW_S3_ENDPOINT_URL"] = os.getenv("MLFLOW_S3_ENDPOINT_URL")
 
 # Model configuration - using the best model from training
-MODEL_NAME = "tourism-neural-cf"  # Best model: Neural Collaborative Filtering
+MODEL_NAME = "tourism-advanced-hybrid-gb"  # Best model: Advanced Hybrid Gradient Boosting
 MODEL_STAGE = "production"
 model = None
 scaler = None
@@ -79,22 +79,22 @@ model_mae = None
 @app.on_event("startup")
 def load_model():
     """
-    Loads the Neural Collaborative Filtering model from the MLflow Model Registry
+    Loads the Advanced Hybrid Gradient Boosting model from the MLflow Model Registry
     during the application's startup.
     """
     global model, model_rmse, model_mae
 
     try:
-        # Load the Neural CF model
+        # Load the Advanced Hybrid GB model
         model_uri = f"models:/{MODEL_NAME}@{MODEL_STAGE}"
-        logging.info(f"Attempting to load Neural CF model from URI: {model_uri}")
+        logging.info(f"Attempting to load Advanced Hybrid GB model from URI: {model_uri}")
         model = mlflow.pyfunc.load_model(model_uri)
         logging.info(
-            f"Neural CF model '{MODEL_NAME}@{MODEL_STAGE}' loaded successfully."
+            f"Advanced Hybrid GB model '{MODEL_NAME}@{MODEL_STAGE}' loaded successfully."
         )
 
-        # Note: Neural CF doesn't need a separate scaler
-        logging.info("Neural CF model loaded (no scaler needed for this model type)")
+        # Note: Advanced Hybrid GB model includes built-in preprocessing
+        logging.info("Advanced Hybrid GB model loaded (preprocessing included in model)")
 
         # Fetch model metrics from MLflow
         logging.info("Fetching model metrics...")
@@ -119,11 +119,11 @@ def load_model():
     except MlflowException as e:
         model, model_rmse, model_mae = None, 0.0, 0.0
         model_rmse_gauge.set(0.0)
-        logging.warning(f"Neural CF model not found in MLflow. Error: {e}")
+        logging.warning(f"Advanced Hybrid GB model not found in MLflow. Error: {e}")
     except Exception as e:
         model, model_rmse, model_mae = None, 0.0, 0.0
         model_rmse_gauge.set(0.0)
-        logging.error(f"Error loading Neural CF model: {e}", exc_info=True)
+        logging.error(f"Error loading Advanced Hybrid GB model: {e}", exc_info=True)
 
 
 @app.get("/")
@@ -140,7 +140,7 @@ def read_root():
         "api_name": "Tourism Recommendation API",
         "model_name": MODEL_NAME,
         "model_stage": MODEL_STAGE,
-        "model_type": "Neural Collaborative Filtering",
+        "model_type": "Advanced Hybrid Gradient Boosting",
         "model_status": model_status,
         "model_rmse": rmse_info,
         "model_mae": mae_info,
@@ -335,42 +335,46 @@ def get_model_info():
     return {
         "model_name": MODEL_NAME,
         "model_stage": MODEL_STAGE,
-        "model_type": "Neural Collaborative Filtering",
-        "algorithm": "Deep Learning with Embeddings",
-        "framework": "TensorFlow",
+        "model_type": "Advanced Hybrid Gradient Boosting",
+        "algorithm": "Hybrid Ensemble with Gradient Boosting",
+        "framework": "Scikit-learn + XGBoost",
         "metrics": {"rmse": model_rmse, "mae": model_mae},
         "architecture": {
-            "model_type": "Neural Network",
-            "embedding_dim": "Dynamic (sqrt of min(n_users, n_items))",
-            "layers": [
-                "User & Item Embeddings",
-                "Dense 128 (ReLU)",
-                "Dropout 0.3",
-                "Dense 64 (ReLU)",
-                "Dropout 0.3",
-                "Dense 32 (ReLU)",
-                "Output Layer (Linear)",
+            "model_type": "Ensemble Model",
+            "components": [
+                "XGBoost Regressor",
+                "Random Forest Regressor", 
+                "Feature Engineering Pipeline",
+                "Collaborative Filtering Features",
+                "Content-Based Features"
             ],
-            "regularization": "L2 regularization",
-            "optimizer": "Adam (lr=0.001)",
+            "feature_engineering": [
+                "User preference aggregation",
+                "Place popularity metrics", 
+                "Category-based encoding",
+                "Price normalization",
+                "Rating statistics"
+            ],
+            "ensemble_method": "Weighted average",
+            "hyperparameters": "Grid search optimized",
         },
         "features": {
-            "input_type": "User-Item pairs",
-            "user_features": "User ID (encoded)",
-            "item_features": "Item ID (encoded)",
-            "collaborative_features": "User-Item interaction patterns",
+            "input_type": "Structured tabular data",
+            "user_features": "Age, preferences, historical ratings",
+            "place_features": "Category, city, price, rating, duration",
+            "engineered_features": "User-place interactions, popularity scores",
         },
         "training": {
-            "batch_size": 512,
-            "epochs": "Up to 50 (with early stopping)",
-            "loss_function": "Mean Squared Error (MSE)",
+            "approach": "Ensemble training",
+            "validation": "Cross-validation",
+            "optimization": "Grid search",
             "evaluation_metrics": [
                 "RMSE",
-                "MAE",
+                "MAE", 
+                "R²",
                 "NDCG@10",
                 "Precision",
                 "Recall",
-                "F1",
             ],
         },
         "model_status": "active",

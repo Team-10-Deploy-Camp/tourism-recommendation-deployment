@@ -2,3 +2,5 @@ scikit-learn
 mlflow
 psycopg2-binary
 boto3
+clickhouse-connect
+python-dotenv

@@ -25,6 +25,31 @@ spec:
               key: MINIO_ROOT_PASSWORD
         - name: MLFLOW_S3_ENDPOINT_URL
           value: "http://minio-service:9000"
+        - name: clickhouse_host
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_host
+        - name: clickhouse_port
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_port
+        - name: clickhouse_user
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_user
+        - name: clickhouse_database
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_database
+        - name: clickhouse_table
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: clickhouse_table
         resources:
           requests:
             memory: "512Mi"

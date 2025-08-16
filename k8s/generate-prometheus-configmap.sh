@@ -46,8 +46,9 @@ EOF
 if [ -f "../prometheus/prometheus.yml" ]; then
     print_status "Menambahkan prometheus.yml..."
     echo "  prometheus.yml: |" >> prometheus-configmap.yaml
-    # Fix the target for Kubernetes
-    sed 's|fastapi_app:8000|fastapi-service:8000|g' ../prometheus/prometheus.yml | sed 's/^/    /' >> prometheus-configmap.yaml
+    # Use the prometheus.yml file as-is since it now includes Kubernetes-compatible configurations
+    # The file already contains both Docker Compose and Kubernetes service discovery configurations
+    sed 's/^/    /' ../prometheus/prometheus.yml >> prometheus-configmap.yaml
 else
     print_warning "File prometheus.yml tidak ditemukan!"
 fi
@@ -58,4 +59,4 @@ print_status "File yang dibuat:"
 echo "  - prometheus-configmap.yaml"
 echo ""
 print_status "Untuk menerapkan ConfigMap:"
-echo "  kubectl apply -f prometheus-configmap.yaml" 
+echo "  kubectl apply -f prometheus-configmap.yaml"

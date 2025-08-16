@@ -1,9 +1,79 @@
 global:
-  scrape_interval: 15s # Interval default untuk mengumpulkan metrik
+  scrape_interval: 15s # Default interval for collecting metrics
+  evaluation_interval: 15s # Evaluate rules every 15 seconds
 
-# Daftar target yang akan di-scrape oleh Prometheus
+# Scrape configuration for different targets
 scrape_configs:
-- job_name: 'fastapi_app'
-  # Konfigurasi ini memungkinkan Prometheus menemukan layanan kita di dalam jaringan Docker
-  static_configs:
-  - targets: [ 'fastapi_app:8000' ] # 'fastapi_app' adalah nama service di docker-compose, 8000 adalah port internal
+  # FastAPI Tourism Recommendation API
+  - job_name: 'tourism-recommendation-api'
+    static_configs:
+      - targets: ['fastapi_app:8000'] # Docker Compose service name
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    honor_labels: true
+    
+  # Kubernetes deployment configuration (when deployed via k8s)
+  - job_name: 'tourism-api-k8s'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - ml-deployment
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: fastapi-app
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+
+# Rule files for alerting (optional)
+rule_files:
+  # - "alert_rules.yml"
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Storage configuration
+# Note: retention settings are typically set via command line flags
+# --storage.tsdb.retention.time=7d --storage.tsdb.retention.size=1GB
+
+# Remote write configuration (optional for long-term storage)
+# remote_write:
+#   - url: "http://remote-storage:8086/api/v1/prom/write?db=prometheus"
+
+# Global external labels (useful for federation)
+# external_labels:
+#   cluster: 'tourism-ml-cluster'
+#   replica: 'prometheus-1'

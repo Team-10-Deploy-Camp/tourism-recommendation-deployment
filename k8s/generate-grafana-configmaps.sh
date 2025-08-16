@@ -46,8 +46,8 @@ EOF
 if [ -f "../grafana/provisioning/datasources/datasource.yml" ]; then
     print_status "Menambahkan datasource.yml..."
     echo "  datasource.yml: |" >> grafana-datasources-configmap.yaml
-    # Fix the URL for Kubernetes
-    sed 's|prometheus_server|prometheus-service|g' ../grafana/provisioning/datasources/datasource.yml | sed 's/^/    /' >> grafana-datasources-configmap.yaml
+    # Use the datasource file as-is since it now includes Kubernetes-compatible configurations
+    sed 's/^/    /' ../grafana/provisioning/datasources/datasource.yml >> grafana-datasources-configmap.yaml
 else
     print_warning "File datasource.yml tidak ditemukan!"
 fi
@@ -100,4 +100,4 @@ echo ""
 print_status "Untuk menerapkan ConfigMap:"
 echo "  kubectl apply -f grafana-datasources-configmap.yaml"
 echo "  kubectl apply -f grafana-dashboards-configmap.yaml"
-echo "  kubectl apply -f grafana-dashboard-files-configmap.yaml" 
+echo "  kubectl apply -f grafana-dashboard-files-configmap.yaml"

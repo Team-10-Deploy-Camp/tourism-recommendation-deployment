@@ -71,6 +71,10 @@ kubectl apply -f namespace.yaml
 # Generate Secrets
 ./generate-secrets.sh
 
+# Apply updated ConfigMap to ensure model configuration is correct
+print_status "Applying updated ConfigMap with correct model configuration..."
+kubectl apply -f configmap.yaml
+
 # Step 1.5: Generate Grafana and Prometheus ConfigMaps from original files
 print_header "Step 1.5: Generating Grafana and Prometheus ConfigMaps"
 
@@ -140,6 +144,10 @@ if kubectl get nodes | grep -q "k3s"; then
     kubectl rollout restart deployment/mlflow-server -n ml-deployment
     kubectl rollout restart deployment/grafana -n ml-deployment
     kubectl rollout restart deployment/prometheus -n ml-deployment
+else
+    # For non-k3s clusters, still restart FastAPI to pick up ConfigMap changes
+    print_status "Restarting FastAPI deployment to pick up updated model configuration..."
+    kubectl rollout restart deployment/fastapi-app -n ml-deployment
 fi
 
 # Step 5: Wait for Deployment
@@ -292,4 +300,4 @@ echo "  kubectl describe svc minio-nodeport -n ml-deployment"
 echo ""
 
 print_status "To delete the deployment:"
-echo "  ./cleanup.sh" 
+echo "  ./cleanup.sh"

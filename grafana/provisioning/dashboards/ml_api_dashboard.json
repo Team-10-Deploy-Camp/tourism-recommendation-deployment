@@ -35,14 +35,14 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "# ML Model & API Monitoring Dashboard\n\nThis dashboard provides insights into the performance of the FastAPI application and the ML model.",
+        "content": "# Tourism Recommendation API Monitoring Dashboard\n\nThis dashboard provides comprehensive insights into the Tourism Recommendation API performance, ML model metrics, and system health.",
         "mode": "markdown"
       },
       "pluginVersion": "9.5.3",
       "type": "text"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Prometheus-K8s",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -97,7 +97,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 2
       },
@@ -116,12 +116,95 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total[5m])) by (method, status_code)",
-          "legendFormat": "{{method}} - {{status_code}}",
+          "expr": "sum(rate(http_requests_total[5m])) by (method, status)",
+          "legendFormat": "{{method}} - {{status}}",
           "refId": "A"
         }
       ],
       "title": "API Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus-K8s",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 2
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(ml_recommendations_total[5m])",
+          "legendFormat": "Recommendations/sec",
+          "refId": "A"
+        }
+      ],
+      "title": "ML Recommendations Rate",
       "type": "timeseries"
     },
     {
@@ -138,18 +221,18 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "--- \n### Machine Learning Model Metrics",
+        "content": "---\n### Machine Learning Model Metrics",
         "mode": "markdown"
       },
       "pluginVersion": "9.5.3",
       "type": "text"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Prometheus-K8s",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "max": 1,
+          "max": 2,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -159,12 +242,16 @@
                 "value": null
               },
               {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
                 "color": "red",
-                "value": 80
+                "value": 1.0
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -190,16 +277,16 @@
       "pluginVersion": "9.5.3",
       "targets": [
         {
-          "expr": "ml_model_accuracy",
-          "legendFormat": "Accuracy",
+          "expr": "ml_model_rmse",
+          "legendFormat": "RMSE",
           "refId": "A"
         }
       ],
-      "title": "Loaded Model Accuracy",
+      "title": "Model RMSE",
       "type": "gauge"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Prometheus-K8s",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -243,16 +330,74 @@
       "pluginVersion": "9.5.3",
       "targets": [
         {
-          "expr": "sum(ml_predictions_total)",
-          "legendFormat": "Total Predictions",
+          "expr": "ml_recommendations_total",
+          "legendFormat": "Total Recommendations",
           "refId": "A"
         }
       ],
-      "title": "Total Predictions Served",
+      "title": "Total Recommendations Served",
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Prometheus-K8s",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.3
+              },
+              {
+                "color": "green",
+                "value": 0.7
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 12
+      },
+      "id": 19,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "9.5.3",
+      "targets": [
+        {
+          "expr": "ml_recommendation_diversity",
+          "legendFormat": "Diversity Score",
+          "refId": "A"
+        }
+      ],
+      "title": "Recommendation Diversity",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus-K8s",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -270,8 +415,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 6,
+        "x": 18,
         "y": 12
       },
       "id": 10,
@@ -321,12 +466,184 @@
       ],
       "title": "Prediction Confidence Distribution",
       "type": "heatmap"
+    },
+    {
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 20,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "---\n### API Endpoint Performance",
+        "mode": "markdown"
+      },
+      "pluginVersion": "9.5.3",
+      "type": "text"
+    },
+    {
+      "datasource": "Prometheus-K8s",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{handler=\"/predict\"}[5m])) by (le))",
+          "legendFormat": "95th percentile - /predict",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{handler=\"/recommend\"}[5m])) by (le))",
+          "legendFormat": "95th percentile - /recommend",
+          "refId": "B"
+        }
+      ],
+      "title": "API Response Time (95th percentile)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus-K8s",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "id": 22,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.5.3",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{handler=\"/predict\"}[5m]))",
+          "legendFormat": "/predict",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(http_requests_total{handler=\"/recommend\"}[5m]))",
+          "legendFormat": "/recommend",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(http_requests_total{handler=\"/health\"}[5m]))",
+          "legendFormat": "/health",
+          "refId": "C"
+        }
+      ],
+      "title": "Endpoint Request Rates",
+      "type": "stat"
     }
   ],
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": [],
+  "tags": ["ml", "tourism", "api", "monitoring"],
   "templating": {
     "list": []
   },
@@ -336,8 +653,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "ML API Monitoring",
+  "title": "Tourism Recommendation API Monitoring",
   "uid": "ml-api-dashboard",
-  "version": 5,
+  "version": 6,
   "weekStart": ""
 }
